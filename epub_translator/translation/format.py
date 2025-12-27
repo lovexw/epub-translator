@@ -1,5 +1,9 @@
-import re
-from xml.etree.ElementTree import Element, ParseError, fromstring
+from xml.etree.ElementTree import Element
+
+from ..utils import normalize_whitespace
+from ..xml import decode_friendly
+
+ID_KEY: str = "id"
 
 
 def format(template_ele: Element, validated_text: str, errors_limit: int) -> Element:
@@ -8,48 +12,35 @@ def format(template_ele: Element, validated_text: str, errors_limit: int) -> Ele
     context.validate(raw_ele=template_ele, validated_ele=validated_ele)
     error_message = context.errors(limit=errors_limit)
     if error_message:
-        raise ValidationError(message=error_message)
+        raise ValidationError(message=error_message, validated_ele=validated_ele)
     return validated_ele
 
 
 class ValidationError(Exception):
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, validated_ele: Element | None = None) -> None:
         super().__init__(message)
+        self.validated_ele = validated_ele
 
 
 def _extract_xml_element(text: str) -> Element:
-    xml_start_pattern = r"<xml(?:\s[^>]*)?>"
-    xml_starts = list(re.finditer(xml_start_pattern, text))
+    first_xml_element: Element | None = None
+    all_xml_elements: int = 0
 
-    if len(xml_starts) == 0:
+    for xml_element in decode_friendly(text, tags="xml"):
+        if first_xml_element is None:
+            first_xml_element = xml_element
+        all_xml_elements += 1
+
+    if first_xml_element is None:
         raise ValidationError(
-            "No <xml> opening tag found. Please ensure the response contains a valid <xml> ... </xml> tag."
+            "No complete <xml>...</xml> block found. Please ensure you have properly closed the XML with </xml> tag."
         )
-    if len(xml_starts) > 1:
+    if all_xml_elements > 1:
         raise ValidationError(
-            "Multiple <xml> opening tags found. Please ensure the response contains only one <xml> tag."
+            f"Found {all_xml_elements} <xml>...</xml> blocks. "
+            "Please return only one XML block without any examples or explanations."
         )
-    xml_start = xml_starts[0]
-    start_pos = xml_start.start()
-    xml_end_pattern = r"</xml>"
-    xml_end = re.search(xml_end_pattern, text[start_pos:])
-
-    if xml_end is None:
-        raise ValidationError(
-            "No </xml> closing tag found. Please ensure the XML structure is properly closed with </xml>."
-        )
-    end_pos = start_pos + xml_end.end()
-    xml_content = text[start_pos:end_pos]
-    try:
-        element = fromstring(xml_content)
-        return element
-    except ParseError as error:
-        raise ValidationError(
-            f"Failed to parse XML: {str(error)}. Please check the XML syntax and ensure it is well-formed."
-        ) from error
-
-
-_ID_KEY = "id"
+    return first_xml_element
 
 
 class _ValidationContext:
@@ -101,7 +92,7 @@ class _ValidationContext:
                     content.append(f"{indent}  - {error}.")
             remain_errors -= len(errors_list)
 
-        content.insert(0, f"Found {total_errors} error(s) in your response XML structure.\n")
+        content.insert(0, f"Found {total_errors} error(s) in your response XML structure.")
         if remain_errors > 0:
             content.append(f"\n... and {remain_errors} more error(s).")
 
@@ -185,7 +176,7 @@ class _ValidationContext:
     def _build_id_map(self, ele: Element):
         id_map: dict[int, Element] = {}
         for child_ele in ele:
-            id_text = child_ele.get(_ID_KEY, None)
+            id_text = child_ele.get(ID_KEY, None)
             if id_text is not None:
                 id = int(id_text)
                 if id < 0:
@@ -196,7 +187,7 @@ class _ValidationContext:
 
     def _has_text_content(self, ele: Element) -> bool:
         text = "".join(self._plain_text(ele))
-        text = re.sub(r"\s+", "", text)
+        text = normalize_whitespace(text)
         text = text.strip()
         return len(text) > 0
 
@@ -204,13 +195,13 @@ class _ValidationContext:
         if ele.text:
             yield ele.text
         for child in ele:
-            if child.get(_ID_KEY, None) is not None:
+            if child.get(ID_KEY, None) is not None:
                 yield from self._plain_text(child)
             if child.tail:
                 yield child.tail
 
     def _str_tag(self, ele: Element) -> str:
-        ele_id = ele.get(_ID_KEY)
+        ele_id = ele.get(ID_KEY)
         content: str
         if ele_id is not None:
             content = f'<{ele.tag} id="{ele_id}"'

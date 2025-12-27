@@ -1,15 +1,15 @@
+from collections.abc import Generator
 from xml.etree.ElementTree import Element
 
-from ..xml import clone_element, plain_text
+from ..xml import clone_element, find_first, plain_text
 
 
 class Chapter:
     def __init__(self, root: Element) -> None:
         self._root: Element = root
-        self._paragraphs: list[Paragraph] = []
-        for child in self._root:
-            if plain_text(child).strip():
-                self._paragraphs.append(Paragraph(child))
+        self._paragraph_items: list[tuple[Element, Element, Paragraph]] = list(
+            self._search_paragraph(root),
+        )
 
     @property
     def element(self) -> Element:
@@ -17,26 +17,36 @@ class Chapter:
 
     @property
     def paragraphs(self) -> list["Paragraph"]:
-        return self._paragraphs
+        return [p for _, _, p in self._paragraph_items]
 
-    def replace_submit(self):
-        for paragraph in self._paragraphs:
+    def replace_submit(self) -> "Chapter":
+        for parent, raw_element, paragraph in self._paragraph_items:
             processed = paragraph.processed_element
             if processed is not None:
-                index = self._index_of_raw_element(paragraph.raw_element)
-                self._root.remove(paragraph.raw_element)
-                self._root.insert(index, processed)
+                index = self._index_of_raw_element(parent, raw_element)
+                parent.remove(raw_element)
+                parent.insert(index, processed)
+        return self
 
-    def append_submit(self):
-        for paragraph in self._paragraphs:
+    def append_submit(self) -> "Chapter":
+        for parent, raw_element, paragraph in self._paragraph_items:
             processed = paragraph.processed_element
             if processed is not None:
-                index = self._index_of_raw_element(paragraph.raw_element)
-                self._root.insert(index + 1, processed)
+                index = self._index_of_raw_element(parent, raw_element)
+                parent.insert(index + 1, processed)
+        return self
 
-    def _index_of_raw_element(self, element: Element) -> int:
-        for i, paragraph in enumerate(self._paragraphs):
-            if paragraph.raw_element == element:
+    def _search_paragraph(self, root: Element) -> Generator[tuple[Element, Element, "Paragraph"], None, None]:
+        body_element = find_first(root, "body")
+        if body_element is None:
+            return
+        for child in body_element:
+            if plain_text(child).strip():
+                yield body_element, child, Paragraph(child)
+
+    def _index_of_raw_element(self, parent: Element, checked_element: Element) -> int:
+        for i, raw_element in enumerate(parent):
+            if raw_element == checked_element:
                 return i
         raise ValueError("Element not found in paragraphs.")
 
@@ -46,8 +56,7 @@ class Paragraph:
         self._raw_element: Element = root
         self._processed_element: Element | None = None
 
-    @property
-    def raw_element(self) -> Element:
+    def clone_raw(self) -> Element:
         return clone_element(self._raw_element)
 
     @property
