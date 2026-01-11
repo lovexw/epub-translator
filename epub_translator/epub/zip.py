@@ -44,24 +44,26 @@ class Zip:
         all_files = self._source_zip.namelist()
         if prefix_path is None:
             return [Path(f) for f in all_files]
-        prefix = str(prefix_path)
+        prefix = prefix_path.as_posix()
         if not prefix.endswith("/"):
             prefix += "/"
         return [Path(f) for f in all_files if f.startswith(prefix)]
 
     def migrate(self, path: Path):
+        path_str = path.as_posix()
+        source_info = self._source_zip.getinfo(path_str)
         with self.read(path) as source_file:
-            with self._target_zip.open(str(path), "w") as target_file:
-                while True:
-                    chunk = source_file.read(_BUFFER_SIZE)
-                    if not chunk:
-                        break
-                    target_file.write(chunk)
+            content = source_file.read()
+        self._target_zip.writestr(
+            zinfo_or_arcname=source_info,
+            data=content,
+            compress_type=source_info.compress_type,
+        )
         self._processed_files.add(path)
 
     def read(self, path: Path) -> IO[bytes]:
-        return self._source_zip.open(str(path), "r")
+        return self._source_zip.open(path.as_posix(), "r")
 
     def replace(self, path: Path) -> IO[bytes]:
         self._processed_files.add(path)
-        return self._target_zip.open(str(path), "w")
+        return self._target_zip.open(path.as_posix(), "w")

@@ -1,145 +1,385 @@
 <div align=center>
   <h1>EPUB Translator</h1>
   <p>
-    <a href="https://github.com/oomol-lab/epub-translator/actions/workflows/build.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/oomol-lab/epub-translator/build.yml" alt"ci" /></a>
+    <a href="https://github.com/oomol-lab/epub-translator/actions/workflows/merge-build.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/oomol-lab/epub-translator/merge-build.yml" alt="ci" /></a>
     <a href="https://pypi.org/project/epub-translator/" target="_blank"><img src="https://img.shields.io/badge/pip_install-epub--translator-blue" alt="pip install epub-translator" /></a>
-    <a href="https://pypi.org/project/epub-translator/" target="_blank"><img src="https://img.shields.io/pypi/v/epub-translator.svg" alt"pypi epub-translator" /></a>
+    <a href="https://pypi.org/project/epub-translator/" target="_blank"><img src="https://img.shields.io/pypi/v/epub-translator.svg" alt="pypi epub-translator" /></a>
     <a href="https://pypi.org/project/epub-translator/" target="_blank"><img src="https://img.shields.io/pypi/pyversions/epub-translator.svg" alt="python versions" /></a>
-    <a href="https://github.com/oomol-lab/epub-translator/blob/main/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/oomol-lab/epub-translator" alt"license" /></a>
+    <a href="https://github.com/oomol-lab/epub-translator/blob/main/LICENSE" target="_blank"><img src="https://img.shields.io/github/license/oomol-lab/epub-translator" alt="license" /></a>
   </p>
   <p><a href="https://hub.oomol.com/package/books-translator?open=true" target="_blank"><img src="https://static.oomol.com/assets/button.svg" alt="Open in OOMOL Studio" /></a></p>
   <p><a href="./README.md">English</a> | 中文</p>
 </div>
 
-## 简介
 
-epub-translator 利用 AI 大模型自动翻译 EPUB 电子书，并 100% 保留原书的格式、插图、目录和排版，同时生成 双语对照版本，方便语言学习或国际分享。
+使用大语言模型翻译 EPUB 电子书，同时保留原文。译文与原文并列显示，打造完美的双语阅读体验，特别适合语言学习和对照阅读。
 
-无论你是开发者、语言学习者，还是电子书爱好者，epub-translator 都能让你轻松跨越语言障碍。
+![翻译效果](./docs/images/translation.png)
 
-- [x] **多语言互译**：支持 英文、中文、日文、西班牙语、法语、德语等主流语言互译。
-- [x] **双语对照**：生成上下对照的双语 EPUB，方便对照学习。
-- [x] **插入提示词**：指导 AI 翻译，如术语表，角色人名表等。
-- [x] **AI 模型可选**：支持 DeepSeek、ChatGPT 等主流大模型。
-- [x] **高性能并行**：AI 请求多路并发，快速翻译整本书籍。
+## 特性
 
-## 环境
+- **双语对照**: 保留原文并与译文并列显示，方便对照阅读
+- **AI 驱动**: 利用大语言模型提供高质量、上下文感知的翻译
+- **格式保留**: 完整保持 EPUB 结构、样式、图片和格式
+- **全面翻译**: 翻译章节内容、目录和元数据
+- **进度追踪**: 内置回调函数监控翻译进度
+- **灵活的 LLM 支持**: 兼容任何 OpenAI 风格的 API 端点
+- **缓存机制**: 内置缓存功能用于翻译失败后恢复进度
 
-你可以将 EPUB Translator 作为库直接调用，或者使用 [OOMOL Studio](https://oomol.com/) 直接运行。
+## 安装
 
-### 使用 OOMOL Studio 运行
-
-OOMOL 使用容器技术将 EPUB Translator 所需的依赖直接打包，开箱即用。
-
-[![](./docs/images/link2bilibili.png)](https://www.bilibili.com/video/BV1Y9G4z5Ewt)
-
-### 作为库直接调用
-
-你也可以直接写 python 代码，将它作为库调用。此时你需要 python 3.10 或更高版本（推荐 3.10.16）。
-
-```shell
+```bash
 pip install epub-translator
 ```
 
+**系统要求**: Python 3.11、3.12 或 3.13
+
 ## 快速开始
 
-首先，构造出调用 AI 大语言模型 的 `LLM` 对象。
+### 使用 OOMOL Studio (推荐)
+
+最简单的使用方式是通过 OOMOL Studio 的可视化界面:
+
+[![观看教程](./docs/images/link2youtube.png)](https://www.youtube.com/watch?v=QsAdiskxfXI)
+
+### 使用 Python API
 
 ```python
-from epub_translator import LLM
+from epub_translator import LLM, translate, language, SubmitKind
 
+# 使用 API 凭证初始化 LLM
 llm = LLM(
-  key="<LLM-API-KEY>", # LLM 的 API key
-  url="https://api.deepseek.com", # LLM 的 base URL
-  model="deepseek-chat", # LLM 的模型名
-  token_encoding="o200k_base", # 计算 tokens 个数的本地模型
+    key="your-api-key",
+    url="https://api.openai.com/v1",
+    model="gpt-4",
+    token_encoding="o200k_base",
 )
-```
 
-然后，就可以调用 `translate` 方法翻译了。
-
-```python
-from epub_translator import translate, Language
-
+# 使用语言常量翻译 EPUB 文件
 translate(
-  llm=llm, # 上一步构造的 llm 对象
-  source_path="/path/to/epub/file", # 要翻译的原 EPUB 文件
-  translated_path="/path/to/translated/epub/file", # 翻译后的 EPUB 保存路径
-  target_language=Language.SIMPLIFIED_CHINESE, # 翻译目标语言，此例为简体中文。
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language=language.CHINESE,
+    submit=SubmitKind.APPEND_BLOCK,
+    llm=llm,
 )
 ```
 
-调用该方法后，便可在保留 EPUB 格式的前提下，将译文插入在原文下。
-
-![](./docs/images/translation.png)
-
-## 功能
-
-### 保存翻译进度
-
-调用 `translate` 翻译整本 EPUB 电子书需要较长的时间，此过程可能因各种原因中断。如调用 LLM 时因网络原因而报错中断，或用户等不及了手动中断了进程。
-
-EPUB Translator 可以将已翻译内容缓存为本地文件，以便在翻译同一本书时，实现保存翻译进度的功能，可以从上一次翻译中断中恢复进度。
-
-只需要在调用 `translate` 配置 `working_path` 字段，指定一个路径缓存翻译所产生的文件即可。在下次启动时，EPUB Translator 会事先从该路径尝试读取翻译进度。
-
-```python
-translate(
-  ..., # 其他参数
-  working_path="/path/to/cache/translating/files",
-)
-```
-
-请注意，每次调用 `translate` 方法都会往 `workspace_path` 所在的文件夹写入缓存文件。这会导致这个文件夹越来越大。你需要自行处理，比如，在翻译成功后自动清空文件夹。
-
-### 监听翻译进度
-
-在调用 `translate` 时通过 `report_progress` 传入一个回调函数，接收一个 0.0 到 1.0 的 `float` 类型的表示进度的参数，便可监听整本书的翻译进度。
+### 带进度追踪
 
 ```python
 from tqdm import tqdm
-from epub_translator import translate
 
-with tqdm(total=1.0, desc="Translating") as bar:
-  def refresh_progress(progress: float) -> None:
-    bar.n = progress
-    bar.refresh()
+with tqdm(total=100, desc="翻译中", unit="%") as pbar:
+    last_progress = 0.0
 
-  translate(
-    ..., # 其他参数
-    report_progress=refresh_progress,
-  )
+    def on_progress(progress: float):
+        nonlocal last_progress
+        increment = (progress - last_progress) * 100
+        pbar.update(increment)
+        last_progress = progress
+
+    translate(
+        source_path="source.epub",
+        target_path="translated.epub",
+        target_language="Chinese",
+        submit=SubmitKind.APPEND_BLOCK,
+        llm=llm,
+        on_progress=on_progress,
+    )
 ```
 
-### 插入提示词
+## API 参考
 
-通过插入提示词来指导 AI 大语言模型如何翻译。比如，你可以插入术语表，令 AI 在翻译时能统一术语。在调用 `translate` 时加上 `user_prompt` 字段即可。
+### `LLM` 类
+
+初始化翻译所需的 LLM 客户端:
+
+```python
+LLM(
+    key: str,                          # API 密钥
+    url: str,                          # API 端点 URL
+    model: str,                        # 模型名称 (例如 "gpt-4")
+    token_encoding: str,               # Token 编码方式 (例如 "o200k_base")
+    cache_path: PathLike | None = None,           # 缓存目录路径
+    timeout: float | None = None,                  # 请求超时时间(秒)
+    top_p: float | tuple[float, float] | None = None,
+    temperature: float | tuple[float, float] | None = None,
+    retry_times: int = 5,                         # 失败重试次数
+    retry_interval_seconds: float = 6.0,          # 重试间隔(秒)
+    log_dir_path: PathLike | None = None,         # 日志目录路径
+)
+```
+
+### `translate` 函数
+
+翻译 EPUB 文件:
 
 ```python
 translate(
-  ..., # 其他参数
-  user_prompt="Le Petit Prince 应该译为“小王子”。",
+    source_path: PathLike | str,       # 源 EPUB 文件路径
+    target_path: PathLike | str,       # 输出 EPUB 文件路径
+    target_language: str,              # 目标语言 (例如 "Chinese", "English")
+    submit: SubmitKind,                # 如何插入译文 (REPLACE, APPEND_TEXT, 或 APPEND_BLOCK)
+    user_prompt: str | None = None,    # 自定义翻译指令
+    max_retries: int = 5,              # 翻译失败的最大重试次数
+    max_group_tokens: int = 1200,      # 每个翻译组的最大 token 数
+    llm: LLM | None = None,            # 用于翻译和填充的单个 LLM 实例
+    translation_llm: LLM | None = None,  # 翻译专用 LLM 实例（优先于 llm）
+    fill_llm: LLM | None = None,       # XML 填充专用 LLM 实例（优先于 llm）
+    on_progress: Callable[[float], None] | None = None,  # 进度回调函数 (0.0-1.0)
+    on_fill_failed: Callable[[FillFailedEvent], None] | None = None,  # 错误回调函数
 )
 ```
 
-### 大语言模型参数
+**注意**: 必须提供 `llm` 或同时提供 `translation_llm` 和 `fill_llm`。使用独立的 LLM 可以针对不同任务进行优化。
 
-在构建 `LLM` 对象时，还有更多的配置项。
+#### 提交模式
+
+`submit` 参数控制译文如何插入到文档中。使用 `SubmitKind` 枚举类型指定插入模式：
+
+```python
+from epub_translator import SubmitKind
+
+# 三种可用模式：
+# - SubmitKind.REPLACE: 用译文替换原文（单语输出）
+# - SubmitKind.APPEND_TEXT: 将译文作为内联文本附加（双语输出）
+# - SubmitKind.APPEND_BLOCK: 将译文作为块级元素附加（双语输出，推荐）
+```
+
+**模式对比：**
+
+- **`SubmitKind.REPLACE`**: 用译文替换原文，创建单语翻译版本。适用于只需要目标语言版本的场景。
+
+- **`SubmitKind.APPEND_TEXT`**: 将译文作为内联文本紧接在原文后附加。两种语言出现在同一段落中，形成连续的阅读流。
+
+- **`SubmitKind.APPEND_BLOCK`** (推荐): 将译文作为独立的块级元素（段落）附加在原文后。这在两种语言之间创建清晰的视觉分隔，最适合双语对照阅读。
+
+**示例：**
+
+```python
+# 创建双语书籍（推荐）
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language=language.CHINESE,
+    submit=SubmitKind.APPEND_BLOCK,
+    llm=llm,
+)
+
+# 创建单语翻译
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language=language.CHINESE,
+    submit=SubmitKind.REPLACE,
+    llm=llm,
+)
+```
+
+#### 语言常量
+
+EPUB Translator 提供了预定义的语言常量供用户使用，您可以使用这些常量而不是直接编写语言名称字符串：
+
+```python
+from epub_translator import language
+
+# 使用示例：
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language=language.CHINESE,
+    submit=SubmitKind.APPEND_BLOCK,
+    llm=llm,
+)
+
+# 您也可以使用自定义的语言字符串：
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language="Icelandic",  # 对于不在常量列表中的语言
+    submit=SubmitKind.APPEND_BLOCK,
+    llm=llm,
+)
+```
+
+### 使用 `on_fill_failed` 处理错误
+
+使用 `on_fill_failed` 回调监控翻译错误。系统会自动重试失败的翻译，最多重试 `max_retries` 次（默认：5 次）。大多数错误会在重试过程中恢复，不会影响最终输出。
+
+```python
+from epub_translator import FillFailedEvent
+
+def handle_fill_error(event: FillFailedEvent):
+    # 只记录会影响最终 EPUB 的关键错误
+    if event.over_maximum_retries:
+        print(f"关键错误（已尝试 {event.retried_count} 次）：")
+        print(f"  {event.error_message}")
+        print("  此错误将出现在最终的 EPUB 文件中！")
+
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language=language.CHINESE,
+    submit=SubmitKind.APPEND_BLOCK,
+    llm=llm,
+    on_fill_failed=handle_fill_error,
+)
+```
+
+**理解错误严重程度：**
+
+`FillFailedEvent` 包含：
+- `error_message: str` - 错误描述
+- `retried_count: int` - 当前重试次数（1 到 max_retries）
+- `over_maximum_retries: bool` - 错误是否为关键错误
+
+**错误分类：**
+
+- **可恢复错误**（`over_maximum_retries=False`）：重试过程中发生的错误。系统会继续重试并可能自动解决这些问题。大多数情况下可以安全忽略。
+
+- **关键错误**（`over_maximum_retries=True`）：所有重试尝试后仍然存在的错误。这些错误会出现在最终的 EPUB 文件中，需要进行调查。
+
+**进阶用法：**
+
+在翻译调试期间进行详细日志记录：
+
+```python
+def handle_fill_error(event: FillFailedEvent):
+    if event.over_maximum_retries:
+        # 关键错误：影响最终输出
+        print(f"❌ 关键错误: {event.error_message}")
+    else:
+        # 信息提示：系统正在重试
+        print(f"⚠️  第 {event.retried_count} 次重试: {event.error_message}")
+```
+
+### 双 LLM 架构
+
+使用不同优化参数的独立 LLM 实例分别处理翻译和 XML 结构填充：
+
+```python
+# 创建两个具有不同温度参数的 LLM 实例
+translation_llm = LLM(
+    key="your-api-key",
+    url="https://api.openai.com/v1",
+    model="gpt-4",
+    token_encoding="o200k_base",
+    temperature=0.8,  # 较高温度用于创造性翻译
+)
+
+fill_llm = LLM(
+    key="your-api-key",
+    url="https://api.openai.com/v1",
+    model="gpt-4",
+    token_encoding="o200k_base",
+    temperature=0.3,  # 较低温度用于结构保持
+)
+
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language=language.CHINESE,
+    submit=SubmitKind.APPEND_BLOCK,
+    translation_llm=translation_llm,
+    fill_llm=fill_llm,
+)
+```
+
+## 配置示例
+
+### OpenAI
 
 ```python
 llm = LLM(
-  key="<LLM-API-KEY>", # LLM 的 API key
-  url="https://api.deepseek.com", # LLM 的 base URL
-  model="deepseek-chat", # LLM 的模型名
-  token_encoding="o200k_base", # 计算 tokens 个数的本地模型
-  timeout=60.0, # 请求超时时间（单位秒）
-  top_p=0.6, # 创造力
-  temperature=0.85, # 温度
-  retry_times=5, # 重试次数，超过此次数后若请求依然失败，则报错
-  retry_interval_seconds=6.0, # 重试间隔时间（单位秒）
+    key="sk-...",
+    url="https://api.openai.com/v1",
+    model="gpt-4",
+    token_encoding="o200k_base",
 )
 ```
 
-## 相关开源库
+### Azure OpenAI
 
-[PDF Craft](https://github.com/oomol-lab/pdf-craft) 可以将 PDF 文件转化为各种其他格式。该项目将专注于扫描书籍的 PDF 文件的处理。与本库搭配，可将扫描 PDF 书籍转换并翻译。搭配使用可参考[ 视频：PDF 扫描件书籍转 EPUB 格式，翻译成双语书](https://www.bilibili.com/video/BV1tMQZY5EYY/)。
+```python
+llm = LLM(
+    key="your-azure-key",
+    url="https://your-resource.openai.azure.com/openai/deployments/your-deployment",
+    model="gpt-4",
+    token_encoding="o200k_base",
+)
+```
+
+### 其他兼容 OpenAI 的服务
+
+任何提供 OpenAI 兼容 API 的服务都可以使用:
+
+```python
+llm = LLM(
+    key="your-api-key",
+    url="https://your-service.com/v1",
+    model="your-model",
+    token_encoding="o200k_base",  # 匹配您模型的编码方式
+)
+```
+
+## 使用场景
+
+- **语言学习**: 阅读原版书籍的同时参考译文
+- **学术研究**: 访问外文文献并获得双语参考
+- **内容本地化**: 为国际读者准备书籍
+- **跨文化阅读**: 在理解文化细微差别的同时欣赏文学作品
+
+## 高级功能
+
+### 自定义翻译提示词
+
+提供特定的翻译指令:
+
+```python
+translate(
+    source_path="source.epub",
+    target_path="translated.epub",
+    target_language="Chinese",
+    submit=SubmitKind.APPEND_BLOCK,
+    llm=llm,
+    user_prompt="使用正式语言并保留专业术语",
+)
+```
+
+### 缓存用于进度恢复
+
+启用缓存以在翻译失败后恢复进度:
+
+```python
+llm = LLM(
+    key="your-api-key",
+    url="https://api.openai.com/v1",
+    model="gpt-4",
+    token_encoding="o200k_base",
+    cache_path="./translation_cache",  # 翻译结果缓存在此
+)
+```
+
+## 相关项目
+
+### PDF Craft
+
+[PDF Craft](https://github.com/oomol-lab/pdf-craft) 可以将 PDF 文件转换为 EPUB 等多种格式，专注于处理扫描版书籍。将 PDF Craft 与 EPUB Translator 结合使用，可以将扫描版 PDF 书籍转换并翻译成双语 EPUB 格式。
+
+**工作流程**: 扫描版 PDF → [PDF Craft] → EPUB → [EPUB Translator] → 双语 EPUB
+
+完整教程请观看: [将扫描版 PDF 书籍转换为 EPUB 格式并翻译成双语书](https://www.bilibili.com/video/BV1tMQZY5EYY/)
+
+## 贡献
+
+欢迎贡献! 请随时提交 Pull Request。
+
+## 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+
+## 支持
+
+- **问题反馈**: [GitHub Issues](https://github.com/oomol-lab/epub-translator/issues)
+- **OOMOL Studio**: [在 OOMOL Studio 中打开](https://hub.oomol.com/package/books-translator?open=true)

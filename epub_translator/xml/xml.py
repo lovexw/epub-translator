@@ -2,6 +2,23 @@ from collections.abc import Generator
 from xml.etree.ElementTree import Element
 
 
+def find_first(element: Element, tag: str) -> Element | None:
+    if element.tag == tag:
+        return element
+    for child in element:
+        result = find_first(child, tag)
+        if result is not None:
+            return result
+    return None
+
+
+def index_in_parent(parent: Element, element: Element) -> int | None:
+    for i, child in enumerate(parent):
+        if child is element:
+            return i
+    return None
+
+
 def iter_with_stack(element: Element) -> Generator[tuple[list[Element], Element], None, None]:
     """先序遍历：yield parent_path, element"""
     stack: list[list[Element]] = [[element]]
